@@ -7,10 +7,11 @@ import com.example.xapi.config.TranslationProperties;
 import com.example.xapi.dto.TranslateRequest;
 import com.example.xapi.dto.TranslateResponse;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpServerErrorException;
@@ -34,7 +35,7 @@ public class TranslationService {
 
     @Autowired
     public TranslationService(
-            RestTemplate restTemplate,
+            @Qualifier("translationRestTemplate") RestTemplate restTemplate,
             TranslationProperties properties,
             TranslationCacheStore cacheStore
     ) {

@@ -21,6 +21,11 @@ translation:
   timeout: ${TRANSLATION_TIMEOUT:15s}
   cache-ttl: ${TRANSLATION_CACHE_TTL:7d}
 
+agent:
+  python:
+    base-url: ${AGENT_PYTHON_BASE_URL:http://localhost:9001}
+    timeout: ${AGENT_PYTHON_TIMEOUT:120s}
+
 spring:
   data:
     redis:

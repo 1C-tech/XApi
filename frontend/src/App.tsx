@@ -14,6 +14,7 @@ export default function App() {
   const { theme, toggleTheme } = useTheme();
   const { translations, toggleTranslation, translateIfNeeded } = useTweetTranslations();
   const [selectedTweet, setSelectedTweet] = useState<TweetDto | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState('1940360837547565056');
   const {
     tweets,
     nextCursor,
@@ -29,12 +30,13 @@ export default function App() {
   } = useUserTweets();
 
   useEffect(() => {
-    search('1940360837547565056');
+    search(selectedUserId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSearch = useCallback(
     (userId: string) => {
+      setSelectedUserId(userId);
       setSelectedTweet(null);
       search(userId);
     },
@@ -51,10 +53,7 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  const cacheKeyParts = cache?.key?.split(':') ?? [];
-  const currentUserId = cacheKeyParts.includes('user-tweets')
-    ? cacheKeyParts[cacheKeyParts.indexOf('user-tweets') + 1] ?? ''
-    : '';
+  const currentUserId = selectedUserId;
 
   return (
     <>
@@ -78,8 +77,8 @@ export default function App() {
                 {selectedTweet
                   ? `@${selectedTweet.authorScreenName} 的帖子和评论`
                   : tweets.length > 0
-                  ? `显示 ${tweets.length} 条推文${nextCursor ? ' · 还有更多' : ''}`
-                  : '输入用户 ID 或选择财经博主加载推文'}
+                    ? `显示 ${tweets.length} 条推文${nextCursor ? ' · 还有更多' : ''}`
+                    : '输入用户 ID 或选择财经博主加载推文'}
               </p>
             </div>
 
