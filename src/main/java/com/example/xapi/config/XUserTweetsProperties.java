@@ -8,6 +8,7 @@ import java.time.Duration;
 public class XUserTweetsProperties {
     private String baseUrl = "https://api.x.com";
     private String endpointId = "54_zVtVXJlQtnIBrY2QSXQ";
+    private String tweetDetailEndpointId = "H8OOoI-5ZE4NxgRr8lfyWg";
     private String bearerToken;
     private String cookie;
     private String csrfToken;
@@ -36,6 +37,14 @@ public class XUserTweetsProperties {
 
     public void setEndpointId(String endpointId) {
         this.endpointId = endpointId;
+    }
+
+    public String getTweetDetailEndpointId() {
+        return tweetDetailEndpointId;
+    }
+
+    public void setTweetDetailEndpointId(String tweetDetailEndpointId) {
+        this.tweetDetailEndpointId = tweetDetailEndpointId;
     }
 
     public String getBearerToken() {

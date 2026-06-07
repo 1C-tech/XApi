@@ -1,6 +1,7 @@
 package com.example.xapi.cache;
 
 import com.example.xapi.dto.UserTweetsPage;
+import com.example.xapi.dto.TweetCommentsPage;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -39,6 +40,22 @@ public class RedisXUserTweetsCacheStore implements XUserTweetsCacheStore {
 
     @Override
     public void put(String key, UserTweetsPage page, Duration freshTtl, Duration staleTtl) {
+        putJson(XUserTweetsCacheKey.fresh(key), page, freshTtl);
+        putJson(XUserTweetsCacheKey.stale(key), page, staleTtl);
+    }
+
+    @Override
+    public Optional<CachedTweetCommentsPage> getFreshComments(String key) {
+        return getCommentsPage(XUserTweetsCacheKey.fresh(key));
+    }
+
+    @Override
+    public Optional<CachedTweetCommentsPage> getStaleComments(String key) {
+        return getCommentsPage(XUserTweetsCacheKey.stale(key));
+    }
+
+    @Override
+    public void putComments(String key, TweetCommentsPage page, Duration freshTtl, Duration staleTtl) {
         putJson(XUserTweetsCacheKey.fresh(key), page, freshTtl);
         putJson(XUserTweetsCacheKey.stale(key), page, staleTtl);
     }
@@ -86,6 +103,20 @@ public class RedisXUserTweetsCacheStore implements XUserTweetsCacheStore {
             return Optional.of(new CachedUserTweetsPage(page, ttl == null ? -1 : ttl));
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to deserialize cached user tweets", e);
+        }
+    }
+
+    private Optional<CachedTweetCommentsPage> getCommentsPage(String redisKey) {
+        String json = redisTemplate.opsForValue().get(redisKey);
+        if (json == null) {
+            return Optional.empty();
+        }
+        try {
+            TweetCommentsPage page = objectMapper.readValue(json, TweetCommentsPage.class);
+            Long ttl = redisTemplate.getExpire(redisKey);
+            return Optional.of(new CachedTweetCommentsPage(page, ttl == null ? -1 : ttl));
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to deserialize cached tweet comments", e);
         }
     }
 

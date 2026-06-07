@@ -2,6 +2,7 @@ x:
   api:
     base-url: https://api.x.com
     endpoint-id: 54_zVtVXJlQtnIBrY2QSXQ
+    tweet-detail-endpoint-id: ${X_TWEET_DETAIL_ENDPOINT_ID:H8OOoI-5ZE4NxgRr8lfyWg}
     bearer-token: ${X_BEARER_TOKEN}
     cookie: ${X_COOKIE:}
     csrf-token: ${X_CSRF_TOKEN:}
