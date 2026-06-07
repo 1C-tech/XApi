@@ -1,6 +1,8 @@
 package com.example.xapi.service;
 
 import com.example.xapi.api.XApiRequestException;
+import com.example.xapi.cache.TranslationCacheKey;
+import com.example.xapi.cache.TranslationCacheStore;
 import com.example.xapi.config.TranslationProperties;
 import com.example.xapi.dto.TranslateRequest;
 import com.example.xapi.dto.TranslateResponse;
@@ -8,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpServerErrorException;
@@ -16,6 +19,8 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.time.Duration;
+import java.util.Optional;
 
 @Service
 public class TranslationService {
@@ -25,10 +30,21 @@ public class TranslationService {
 
     private final RestTemplate restTemplate;
     private final TranslationProperties properties;
+    private final TranslationCacheStore cacheStore;
 
-    public TranslationService(RestTemplate restTemplate, TranslationProperties properties) {
+    @Autowired
+    public TranslationService(
+            RestTemplate restTemplate,
+            TranslationProperties properties,
+            TranslationCacheStore cacheStore
+    ) {
         this.restTemplate = restTemplate;
         this.properties = properties;
+        this.cacheStore = cacheStore;
+    }
+
+    public TranslationService(RestTemplate restTemplate, TranslationProperties properties) {
+        this(restTemplate, properties, new NoopTranslationCacheStore());
     }
 
     public TranslateResponse translate(TranslateRequest request) {
@@ -38,6 +54,11 @@ public class TranslationService {
 
         String sourceLang = StringUtils.hasText(request.sourceLang()) ? request.sourceLang() : "auto";
         String targetLang = StringUtils.hasText(request.targetLang()) ? request.targetLang() : "zh-CN";
+        String cacheKey = TranslationCacheKey.translation(sourceLang, targetLang, request.text());
+        Optional<TranslateResponse> cachedResponse = cacheStore.get(cacheKey);
+        if (cachedResponse.isPresent()) {
+            return cachedResponse.get();
+        }
 
         LibreTranslateRequest body = new LibreTranslateRequest(
                 request.text(),
@@ -51,10 +72,14 @@ public class TranslationService {
         }
 
         try {
-            return translateWithLibreTranslate(body, headers, sourceLang, targetLang);
+            TranslateResponse response = translateWithLibreTranslate(body, headers, sourceLang, targetLang);
+            cacheStore.put(cacheKey, response, properties.getCacheTtl());
+            return response;
         } catch (RestClientException | XApiRequestException primaryFailure) {
             try {
-                return translateWithMyMemory(request.text(), sourceLang, targetLang);
+                TranslateResponse response = translateWithMyMemory(request.text(), sourceLang, targetLang);
+                cacheStore.put(cacheKey, response, properties.getCacheTtl());
+                return response;
             } catch (RestClientException | XApiRequestException fallbackFailure) {
                 throw new XApiRequestException("Translation request failed", primaryFailure);
             }
@@ -141,5 +166,16 @@ public class TranslationService {
             return "zh-CN";
         }
         return language;
+    }
+
+    private static final class NoopTranslationCacheStore implements TranslationCacheStore {
+        @Override
+        public Optional<TranslateResponse> get(String key) {
+            return Optional.empty();
+        }
+
+        @Override
+        public void put(String key, TranslateResponse response, Duration ttl) {
+        }
     }
 }

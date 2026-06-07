@@ -12,7 +12,7 @@ import { ErrorToast } from './components/common/ErrorToast';
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
-  const { translations, toggleTranslation } = useTweetTranslations();
+  const { translations, toggleTranslation, translateIfNeeded } = useTweetTranslations();
   const [selectedTweet, setSelectedTweet] = useState<TweetDto | null>(null);
   const {
     tweets,
@@ -87,8 +87,10 @@ export default function App() {
               <TweetDetail
                 tweet={selectedTweet}
                 translation={translations[selectedTweet.id]}
+                translations={translations}
                 onBack={handleBackToFeed}
                 onToggleTranslation={toggleTranslation}
+                onTranslateIfNeeded={translateIfNeeded}
               />
             ) : (
               <TweetFeed
