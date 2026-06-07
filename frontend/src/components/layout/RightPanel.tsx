@@ -2,6 +2,7 @@ import { Hash } from 'lucide-react';
 import type { RateLimitDto, CacheMetadataDto } from '../../types/api';
 import { RateLimitBar } from '../common/RateLimitBar';
 import { CacheBadge } from '../common/CacheBadge';
+import { StockAgentPanel } from '../agent/StockAgentPanel';
 
 interface RightPanelProps {
   rateLimit: RateLimitDto | null;
@@ -48,6 +49,7 @@ export function RightPanel({
         </div>
       )}
 
+      <StockAgentPanel currentUserId={userId} />
       <RateLimitBar rateLimit={rateLimit} />
       <CacheBadge cache={cache} />
 

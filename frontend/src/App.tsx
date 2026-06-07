@@ -9,7 +9,6 @@ import { RightPanel } from './components/layout/RightPanel';
 import { TweetFeed } from './components/feed/TweetFeed';
 import { TweetDetail } from './components/feed/TweetDetail';
 import { ErrorToast } from './components/common/ErrorToast';
-import { StockAgentPanel } from './components/agent/StockAgentPanel';
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
@@ -91,19 +90,16 @@ export default function App() {
                 onToggleTranslation={toggleTranslation}
               />
             ) : (
-              <>
-                <StockAgentPanel currentUserId={currentUserId} />
-                <TweetFeed
-                  tweets={tweets}
-                  loading={loading}
-                  loadingMore={loadingMore}
-                  hasMore={hasMore}
-                  onLoadMore={loadMore}
-                  translations={translations}
-                  onToggleTranslation={toggleTranslation}
-                  onSelectTweet={handleSelectTweet}
-                />
-              </>
+              <TweetFeed
+                tweets={tweets}
+                loading={loading}
+                loadingMore={loadingMore}
+                hasMore={hasMore}
+                onLoadMore={loadMore}
+                translations={translations}
+                onToggleTranslation={toggleTranslation}
+                onSelectTweet={handleSelectTweet}
+              />
             )}
           </div>
         }
