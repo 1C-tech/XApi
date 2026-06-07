@@ -2,8 +2,7 @@ package com.example.xapi.upstream;
 
 import com.example.xapi.api.XApiRequestException;
 import com.example.xapi.config.XUserTweetsProperties;
-import com.example.xapi.dto.RateLimitDto;
-import com.example.xapi.dto.TweetDto;
+import com.example.xapi.dto.TweetCommentsPage;
 import com.example.xapi.dto.UserTweetsPage;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -23,9 +22,7 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -34,11 +31,13 @@ public class XUserTweetsRestUpstreamClient implements XUserTweetsUpstreamClient 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final XUserTweetsProperties properties;
+    private final XTimelineParser timelineParser;
 
     public XUserTweetsRestUpstreamClient(
             RestTemplateBuilder restTemplateBuilder,
             ObjectMapper objectMapper,
-            XUserTweetsProperties properties
+            XUserTweetsProperties properties,
+            XTimelineParser timelineParser
     ) {
         this.restTemplate = restTemplateBuilder
                 .setConnectTimeout(Duration.ofSeconds(10))
@@ -46,6 +45,7 @@ public class XUserTweetsRestUpstreamClient implements XUserTweetsUpstreamClient 
                 .build();
         this.objectMapper = objectMapper;
         this.properties = properties;
+        this.timelineParser = timelineParser;
     }
 
     @Override
@@ -54,7 +54,7 @@ public class XUserTweetsRestUpstreamClient implements XUserTweetsUpstreamClient 
             throw new IllegalStateException("x.api.bearer-token must not be blank");
         }
 
-        String uri = buildUri(userId, count, cursor);
+        String uri = buildUserTweetsUri(userId, count, cursor);
         ResponseEntity<JsonNode> response;
         try {
             response = restTemplate.exchange(
@@ -78,10 +78,43 @@ public class XUserTweetsRestUpstreamClient implements XUserTweetsUpstreamClient 
             throw new XApiRequestException("X API returned empty body");
         }
 
-        return parsePage(body, response.getHeaders());
+        return timelineParser.parseUserTweetsPage(body, response.getHeaders());
     }
 
-    private String buildUri(String userId, int count, String cursor) {
+    @Override
+    public TweetCommentsPage fetchTweetComments(String tweetId, int count, String cursor) {
+        if (!StringUtils.hasText(properties.getBearerToken())) {
+            throw new IllegalStateException("x.api.bearer-token must not be blank");
+        }
+
+        String uri = buildTweetDetailUri(tweetId, count, cursor);
+        ResponseEntity<JsonNode> response;
+        try {
+            response = restTemplate.exchange(
+                    URI.create(uri),
+                    HttpMethod.GET,
+                    new HttpEntity<>(buildHeaders()),
+                    JsonNode.class
+            );
+        } catch (HttpStatusCodeException e) {
+            throw new XApiRequestException(
+                    "X API request failed, status=" + e.getStatusCode().value()
+                            + ", body=" + e.getResponseBodyAsString(),
+                    e
+            );
+        } catch (RestClientException e) {
+            throw new XApiRequestException("X API request failed", e);
+        }
+
+        JsonNode body = response.getBody();
+        if (body == null) {
+            throw new XApiRequestException("X API returned empty body");
+        }
+
+        return timelineParser.parseTweetCommentsPage(body, tweetId, response.getHeaders());
+    }
+
+    private String buildUserTweetsUri(String userId, int count, String cursor) {
         try {
             Map<String, Object> variables = new LinkedHashMap<>();
             variables.put("userId", userId);
@@ -99,6 +132,37 @@ public class XUserTweetsRestUpstreamClient implements XUserTweetsUpstreamClient 
 
             return stripTrailingSlash(properties.getBaseUrl())
                     + "/graphql/" + properties.getEndpointId() + "/UserTweets"
+                    + "?variables=" + encode(variablesJson)
+                    + "&features=" + encode(featuresJson)
+                    + "&fieldToggles=" + encode(fieldTogglesJson);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to build X API query JSON", e);
+        }
+    }
+
+    private String buildTweetDetailUri(String tweetId, int count, String cursor) {
+        try {
+            Map<String, Object> variables = new LinkedHashMap<>();
+            variables.put("focalTweetId", tweetId);
+            if (StringUtils.hasText(cursor)) {
+                variables.put("cursor", cursor);
+            }
+            variables.put("referrer", "profile");
+            variables.put("with_rux_injections", false);
+            variables.put("rankingMode", "Relevance");
+            variables.put("includePromotedContent", true);
+            variables.put("withCommunity", true);
+            variables.put("withQuickPromoteEligibilityTweetFields", true);
+            variables.put("withBirdwatchNotes", true);
+            variables.put("withVoice", true);
+            variables.put("count", count);
+
+            String variablesJson = objectMapper.writeValueAsString(variables);
+            String featuresJson = objectMapper.writeValueAsString(defaultFeatures());
+            String fieldTogglesJson = objectMapper.writeValueAsString(Map.of("withArticleRichContentState", false));
+
+            return stripTrailingSlash(properties.getBaseUrl())
+                    + "/graphql/" + properties.getTweetDetailEndpointId() + "/TweetDetail"
                     + "?variables=" + encode(variablesJson)
                     + "&features=" + encode(featuresJson)
                     + "&fieldToggles=" + encode(fieldTogglesJson);
@@ -129,103 +193,6 @@ public class XUserTweetsRestUpstreamClient implements XUserTweetsUpstreamClient 
             headers.add("x-guest-token", properties.getGuestToken());
         }
         return headers;
-    }
-
-    private UserTweetsPage parsePage(JsonNode root, HttpHeaders headers) {
-        List<TweetDto> tweets = new ArrayList<>();
-        String bottomCursor = null;
-
-        JsonNode instructions = root.path("data")
-                .path("user")
-                .path("result")
-                .path("timeline")
-                .path("timeline")
-                .path("instructions");
-
-        if (instructions.isArray()) {
-            for (JsonNode instruction : instructions) {
-                String type = instruction.path("type").asText();
-                if ("TimelinePinEntry".equals(type)) {
-                    JsonNode tweetResult = instruction.path("entry").path("content")
-                            .path("itemContent").path("tweet_results").path("result");
-                    addTweetIfPresent(tweets, tweetResult);
-                } else if ("TimelineAddEntries".equals(type)) {
-                    JsonNode entries = instruction.path("entries");
-                    if (entries.isArray()) {
-                        for (JsonNode entry : entries) {
-                            JsonNode content = entry.path("content");
-                            String cursorType = content.path("operation").path("cursorType").asText();
-                            String entryId = entry.path("entryId").asText();
-                            if ("Bottom".equals(cursorType) || entryId.startsWith("cursor-bottom")) {
-                                bottomCursor = textOrNull(content.path("value"));
-                                continue;
-                            }
-
-                            JsonNode tweetResult = content.path("itemContent")
-                                    .path("tweet_results")
-                                    .path("result");
-                            addTweetIfPresent(tweets, tweetResult);
-                        }
-                    }
-                }
-            }
-        }
-
-        RateLimitDto rateLimit = new RateLimitDto(
-                intHeader(headers, "x-rate-limit-limit"),
-                intHeader(headers, "x-rate-limit-remaining"),
-                longHeader(headers, "x-rate-limit-reset")
-        );
-        return new UserTweetsPage(tweets, bottomCursor, rateLimit, root);
-    }
-
-    private static void addTweetIfPresent(List<TweetDto> tweets, JsonNode result) {
-        JsonNode tweetNode = unwrapTweet(result);
-        JsonNode legacy = tweetNode.path("legacy");
-        String id = firstText(
-                tweetNode.path("rest_id"),
-                legacy.path("id_str"),
-                legacy.path("conversation_id_str")
-        );
-        String fullText = textOrNull(legacy.path("full_text"));
-        if (id == null && fullText == null) {
-            return;
-        }
-
-        JsonNode user = tweetNode.path("core").path("user_results").path("result");
-        JsonNode userCore = user.path("core");
-        JsonNode userLegacy = user.path("legacy");
-        JsonNode views = tweetNode.path("views");
-
-        tweets.add(new TweetDto(
-                id,
-                textOrNull(legacy.path("created_at")),
-                fullText,
-                textOrNull(legacy.path("lang")),
-                legacy.path("favorite_count").asInt(0),
-                legacy.path("retweet_count").asInt(0),
-                legacy.path("reply_count").asInt(0),
-                legacy.path("quote_count").asInt(0),
-                legacy.path("bookmark_count").asInt(0),
-                firstText(views.path("count"), legacy.path("ext_views").path("count")),
-                firstText(userCore.path("name"), userLegacy.path("name")),
-                firstText(userCore.path("screen_name"), userLegacy.path("screen_name")),
-                firstText(user.path("avatar").path("image_url"), userLegacy.path("profile_image_url_https")),
-                tweetNode
-        ));
-    }
-
-    private static JsonNode unwrapTweet(JsonNode result) {
-        if (result == null || result.isMissingNode() || result.isNull()) {
-            return result;
-        }
-        if (result.has("tweet")) {
-            return result.path("tweet");
-        }
-        if (result.has("tweet_results")) {
-            return result.path("tweet_results").path("result");
-        }
-        return result;
     }
 
     private static Map<String, Object> defaultFeatures() {
@@ -293,32 +260,5 @@ public class XUserTweetsRestUpstreamClient implements XUserTweetsUpstreamClient 
         return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
     }
 
-    private static String firstText(JsonNode... nodes) {
-        for (JsonNode node : nodes) {
-            String value = textOrNull(node);
-            if (value != null) {
-                return value;
-            }
-        }
-        return null;
-    }
-
-    private static String textOrNull(JsonNode node) {
-        if (node == null || node.isMissingNode() || node.isNull()) {
-            return null;
-        }
-        String value = node.asText(null);
-        return StringUtils.hasText(value) ? value : null;
-    }
-
-    private static Integer intHeader(HttpHeaders headers, String name) {
-        String value = headers.getFirst(name);
-        return StringUtils.hasText(value) ? Integer.valueOf(value) : null;
-    }
-
-    private static Long longHeader(HttpHeaders headers, String name) {
-        String value = headers.getFirst(name);
-        return StringUtils.hasText(value) ? Long.valueOf(value) : null;
-    }
 }
 

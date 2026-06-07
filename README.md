@@ -21,6 +21,7 @@ docker compose up -d redis
 
 ```powershell
 $env:X_BEARER_TOKEN="your bearer token"
+$env:X_TWEET_DETAIL_ENDPOINT_ID="your tweet detail graphql endpoint id"
 $env:X_COOKIE="your x cookie"
 $env:X_CSRF_TOKEN="your ct0 csrf token"
 $env:REDIS_HOST="localhost"
@@ -54,6 +55,14 @@ npm run dev
 GET /api/x/user-tweets?userId=902839045356744704&count=20
 GET /api/x/user-tweets?userId=902839045356744704&count=20&cursor=上一页nextCursor
 GET /api/x/user-tweets?userId=902839045356744704&count=20&raw=true
+```
+
+获取推文评论：
+
+```http
+GET /api/x/tweet-comments?tweetId=1800000000000000000&count=20
+GET /api/x/tweet-comments?tweetId=1800000000000000000&count=20&cursor=nextCursor
+GET /api/x/tweet-comments?tweetId=1800000000000000000&count=20&raw=true
 ```
 
 翻译文本：

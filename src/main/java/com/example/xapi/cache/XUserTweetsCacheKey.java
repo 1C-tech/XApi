@@ -13,6 +13,10 @@ public final class XUserTweetsCacheKey {
         return "x:user-tweets:" + userId + ":" + count + ":" + hash(cursor == null ? "" : cursor) + ":" + raw;
     }
 
+    public static String tweetComments(String tweetId, int count, String cursor, boolean raw) {
+        return "x:tweet-comments:" + tweetId + ":" + count + ":" + hash(cursor == null ? "" : cursor) + ":" + raw;
+    }
+
     public static String lock(String cacheKey) {
         return "x:lock:" + cacheKey;
     }

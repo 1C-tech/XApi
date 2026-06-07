@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
+import java.util.List;
+
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class TweetDto {
     private final String id;
@@ -20,7 +22,43 @@ public class TweetDto {
     private final String authorName;
     private final String authorScreenName;
     private final String authorAvatarUrl;
+    private final List<TweetMediaDto> media;
     private final JsonNode raw;
+
+    public TweetDto(
+            String id,
+            String createdAt,
+            String fullText,
+            String lang,
+            int favoriteCount,
+            int retweetCount,
+            int replyCount,
+            int quoteCount,
+            int bookmarkCount,
+            String viewCount,
+            String authorName,
+            String authorScreenName,
+            String authorAvatarUrl,
+            JsonNode raw
+    ) {
+        this(
+                id,
+                createdAt,
+                fullText,
+                lang,
+                favoriteCount,
+                retweetCount,
+                replyCount,
+                quoteCount,
+                bookmarkCount,
+                viewCount,
+                authorName,
+                authorScreenName,
+                authorAvatarUrl,
+                List.of(),
+                raw
+        );
+    }
 
     @JsonCreator
     public TweetDto(
@@ -37,6 +75,7 @@ public class TweetDto {
             @JsonProperty("authorName") String authorName,
             @JsonProperty("authorScreenName") String authorScreenName,
             @JsonProperty("authorAvatarUrl") String authorAvatarUrl,
+            @JsonProperty("media") List<TweetMediaDto> media,
             @JsonProperty("raw") JsonNode raw
     ) {
         this.id = id;
@@ -52,6 +91,7 @@ public class TweetDto {
         this.authorName = authorName;
         this.authorScreenName = authorScreenName;
         this.authorAvatarUrl = authorAvatarUrl;
+        this.media = media == null ? List.of() : List.copyOf(media);
         this.raw = raw;
     }
 
@@ -107,6 +147,10 @@ public class TweetDto {
         return authorAvatarUrl;
     }
 
+    public List<TweetMediaDto> getMedia() {
+        return media;
+    }
+
     public JsonNode getRaw() {
         return raw;
     }
@@ -126,6 +170,7 @@ public class TweetDto {
                 authorName,
                 authorScreenName,
                 authorAvatarUrl,
+                media,
                 null
         );
     }
