@@ -50,10 +50,6 @@ public class XUserTweetsRestUpstreamClient implements XUserTweetsUpstreamClient 
 
     @Override
     public UserTweetsPage fetchUserTweets(String userId, int count, String cursor) {
-        if (!StringUtils.hasText(properties.getBearerToken())) {
-            throw new IllegalStateException("x.api.bearer-token must not be blank");
-        }
-
         String uri = buildUserTweetsUri(userId, count, cursor);
         ResponseEntity<JsonNode> response;
         try {
@@ -83,10 +79,6 @@ public class XUserTweetsRestUpstreamClient implements XUserTweetsUpstreamClient 
 
     @Override
     public TweetCommentsPage fetchTweetComments(String tweetId, int count, String cursor) {
-        if (!StringUtils.hasText(properties.getBearerToken())) {
-            throw new IllegalStateException("x.api.bearer-token must not be blank");
-        }
-
         String uri = buildTweetDetailUri(tweetId, count, cursor);
         ResponseEntity<JsonNode> response;
         try {
@@ -172,13 +164,15 @@ public class XUserTweetsRestUpstreamClient implements XUserTweetsUpstreamClient 
         HttpHeaders headers = new HttpHeaders();
         headers.add("accept", "*/*");
         headers.add("content-type", "application/json");
-        headers.add("authorization", authorizationHeader(properties.getBearerToken()));
         headers.add("x-twitter-active-user", "yes");
         headers.add("x-twitter-client-language", properties.getLanguage());
         headers.add("x-client-transaction-id", newTransactionId());
         headers.add("referer", "https://x.com/");
         headers.add("user-agent", properties.getUserAgent());
 
+        if (StringUtils.hasText(properties.getBearerToken())) {
+            headers.add("authorization", authorizationHeader(properties.getBearerToken()));
+        }
         if (StringUtils.hasText(properties.getCookie())) {
             headers.add("cookie", properties.getCookie());
         }
