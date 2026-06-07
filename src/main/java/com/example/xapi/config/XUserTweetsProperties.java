@@ -8,7 +8,7 @@ import java.time.Duration;
 public class XUserTweetsProperties {
     private String baseUrl = "https://api.x.com";
     private String endpointId = "54_zVtVXJlQtnIBrY2QSXQ";
-    private String tweetDetailEndpointId = "H8OOoI-5ZE4NxgRr8lfyWg";
+    private String tweetDetailEndpointId = "iFEr5AcP121Og4wx9Yqo3w";
     private String bearerToken;
     private String cookie;
     private String csrfToken;

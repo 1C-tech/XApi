@@ -6,15 +6,17 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 
 public final class XUserTweetsCacheKey {
+    private static final String VERSION = "v2";
+
     private XUserTweetsCacheKey() {
     }
 
     public static String userTweets(String userId, int count, String cursor, boolean raw) {
-        return "x:user-tweets:" + userId + ":" + count + ":" + hash(cursor == null ? "" : cursor) + ":" + raw;
+        return "x:" + VERSION + ":user-tweets:" + userId + ":" + count + ":" + hash(cursor == null ? "" : cursor) + ":" + raw;
     }
 
     public static String tweetComments(String tweetId, int count, String cursor, boolean raw) {
-        return "x:tweet-comments:" + tweetId + ":" + count + ":" + hash(cursor == null ? "" : cursor) + ":" + raw;
+        return "x:" + VERSION + ":tweet-comments:" + tweetId + ":" + count + ":" + hash(cursor == null ? "" : cursor) + ":" + raw;
     }
 
     public static String lock(String cacheKey) {

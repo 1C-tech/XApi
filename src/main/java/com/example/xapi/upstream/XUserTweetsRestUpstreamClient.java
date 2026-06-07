@@ -147,19 +147,16 @@ public class XUserTweetsRestUpstreamClient implements XUserTweetsUpstreamClient 
             if (StringUtils.hasText(cursor)) {
                 variables.put("cursor", cursor);
             }
-            variables.put("referrer", "profile");
             variables.put("with_rux_injections", false);
             variables.put("rankingMode", "Relevance");
-            variables.put("includePromotedContent", true);
-            variables.put("withCommunity", true);
+            variables.put("includePromotedContent", false);
             variables.put("withQuickPromoteEligibilityTweetFields", true);
             variables.put("withBirdwatchNotes", true);
             variables.put("withVoice", true);
-            variables.put("count", count);
 
             String variablesJson = objectMapper.writeValueAsString(variables);
             String featuresJson = objectMapper.writeValueAsString(defaultFeatures());
-            String fieldTogglesJson = objectMapper.writeValueAsString(Map.of("withArticleRichContentState", false));
+            String fieldTogglesJson = objectMapper.writeValueAsString(Map.of("withArticleRichContentState", true));
 
             return stripTrailingSlash(properties.getBaseUrl())
                     + "/graphql/" + properties.getTweetDetailEndpointId() + "/TweetDetail"
