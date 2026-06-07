@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useTheme } from './hooks/useTheme';
 import { useUserTweets } from './hooks/useUserTweets';
 import { useTweetTranslations } from './hooks/useTweetTranslations';
@@ -7,10 +7,12 @@ import { LeftSidebar } from './components/layout/LeftSidebar';
 import { RightPanel } from './components/layout/RightPanel';
 import { TweetFeed } from './components/feed/TweetFeed';
 import { ErrorToast } from './components/common/ErrorToast';
+import { StockAgentPanel } from './components/agent/StockAgentPanel';
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
   const { translations, toggleTranslation } = useTweetTranslations();
+  const [selectedUserId, setSelectedUserId] = useState('1940360837547565056');
   const {
     tweets,
     nextCursor,
@@ -26,18 +28,19 @@ export default function App() {
   } = useUserTweets();
 
   useEffect(() => {
-    search('1940360837547565056');
+    search(selectedUserId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSearch = useCallback(
     (userId: string) => {
+      setSelectedUserId(userId);
       search(userId);
     },
     [search]
   );
 
-  const currentUserId = cache?.key?.split(':')[2] ?? '';
+  const currentUserId = selectedUserId;
 
   return (
     <>
@@ -61,6 +64,8 @@ export default function App() {
                   : '输入用户 ID 或选择财经博主加载推文'}
               </p>
             </div>
+
+            <StockAgentPanel currentUserId={currentUserId} />
 
             <TweetFeed
               tweets={tweets}

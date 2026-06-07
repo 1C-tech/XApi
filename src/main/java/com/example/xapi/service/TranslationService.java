@@ -5,6 +5,7 @@ import com.example.xapi.config.TranslationProperties;
 import com.example.xapi.dto.TranslateRequest;
 import com.example.xapi.dto.TranslateResponse;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -26,7 +27,7 @@ public class TranslationService {
     private final RestTemplate restTemplate;
     private final TranslationProperties properties;
 
-    public TranslationService(RestTemplate restTemplate, TranslationProperties properties) {
+    public TranslationService(@Qualifier("translationRestTemplate") RestTemplate restTemplate, TranslationProperties properties) {
         this.restTemplate = restTemplate;
         this.properties = properties;
     }

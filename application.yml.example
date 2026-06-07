@@ -20,6 +20,11 @@ translation:
   api-key: ${TRANSLATION_API_KEY:}
   timeout: ${TRANSLATION_TIMEOUT:15s}
 
+agent:
+  python:
+    base-url: ${AGENT_PYTHON_BASE_URL:http://localhost:9001}
+    timeout: ${AGENT_PYTHON_TIMEOUT:120s}
+
 spring:
   data:
     redis:
