@@ -9,6 +9,7 @@ public class TranslationProperties {
     private String baseUrl = "https://libretranslate.com/translate";
     private String apiKey;
     private Duration timeout = Duration.ofSeconds(15);
+    private Duration cacheTtl = Duration.ofDays(7);
 
     public String getBaseUrl() {
         return baseUrl;
@@ -32,5 +33,13 @@ public class TranslationProperties {
 
     public void setTimeout(Duration timeout) {
         this.timeout = timeout;
+    }
+
+    public Duration getCacheTtl() {
+        return cacheTtl;
+    }
+
+    public void setCacheTtl(Duration cacheTtl) {
+        this.cacheTtl = cacheTtl;
     }
 }

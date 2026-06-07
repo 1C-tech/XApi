@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 interface TranslationState {
   text?: string;
@@ -14,22 +14,36 @@ interface TranslateResponse {
   provider: string;
 }
 
+interface TranslationRequestOptions {
+  retryFailed?: boolean;
+}
+
 export function useTweetTranslations() {
   const [translations, setTranslations] = useState<Record<string, TranslationState>>({});
+  const inFlightIds = useRef<Set<string>>(new Set());
 
-  const toggleTranslation = useCallback(async (tweetId: string, text: string, lang: string) => {
+  const requestTranslation = useCallback(async (
+    tweetId: string,
+    text: string,
+    lang: string,
+    options: TranslationRequestOptions = {}
+  ) => {
+    if (!text.trim()) return;
+
     const current = translations[tweetId];
-    if (current?.text) {
-      setTranslations((prev) => ({
-        ...prev,
-        [tweetId]: { ...prev[tweetId], visible: !prev[tweetId]?.visible },
-      }));
+    if (
+      current?.loading
+      || current?.text
+      || (current?.error && !options.retryFailed)
+      || inFlightIds.current.has(tweetId)
+    ) {
       return;
     }
 
+    inFlightIds.current.add(tweetId);
     setTranslations((prev) => ({
       ...prev,
-      [tweetId]: { loading: true, visible: true },
+      [tweetId]: { ...prev[tweetId], loading: true, visible: true, error: undefined },
     }));
 
     try {
@@ -62,15 +76,31 @@ export function useTweetTranslations() {
       setTranslations((prev) => ({
         ...prev,
         [tweetId]: {
+          ...prev[tweetId],
           loading: false,
           visible: true,
           error: message,
         },
       }));
+    } finally {
+      inFlightIds.current.delete(tweetId);
     }
   }, [translations]);
 
-  return { translations, toggleTranslation };
+  const toggleTranslation = useCallback(async (tweetId: string, text: string, lang: string) => {
+    const current = translations[tweetId];
+    if (current?.text) {
+      setTranslations((prev) => ({
+        ...prev,
+        [tweetId]: { ...prev[tweetId], visible: !prev[tweetId]?.visible },
+      }));
+      return;
+    }
+
+    await requestTranslation(tweetId, text, lang, { retryFailed: true });
+  }, [requestTranslation, translations]);
+
+  return { translations, toggleTranslation, translateIfNeeded: requestTranslation };
 }
 
 export type { TranslationState };

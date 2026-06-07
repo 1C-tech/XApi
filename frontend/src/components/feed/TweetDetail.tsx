@@ -1,4 +1,4 @@
-import { ArrowLeft, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Languages, MessageCircle } from 'lucide-react';
 import { useEffect } from 'react';
 import type { TweetDto } from '../../types/api';
 import type { TranslationState } from '../../hooks/useTweetTranslations';
@@ -11,11 +11,52 @@ import { relativeTime, TweetMediaGrid } from './TweetCard';
 interface TweetDetailProps {
   tweet: TweetDto;
   translation?: TranslationState;
+  translations: Record<string, TranslationState>;
   onBack: () => void;
   onToggleTranslation: (tweetId: string, text: string, lang: string) => void;
+  onTranslateIfNeeded: (tweetId: string, text: string, lang: string) => void;
 }
 
-function CommentItem({ comment }: { comment: TweetDto }) {
+function TranslationBlock({ translation }: { translation?: TranslationState }) {
+  if (!translation?.visible) return null;
+
+  if (translation.loading) {
+    return (
+      <div className="mt-3 rounded-lg border border-accent/15 bg-accent/5 p-3">
+        <p className="text-sm text-text-secondary">正在翻译...</p>
+      </div>
+    );
+  }
+
+  if (translation.text) {
+    return (
+      <div className="mt-3 rounded-lg border border-accent/15 bg-accent/5 p-3">
+        <p className="mb-1 text-xs font-semibold text-accent">中文译文</p>
+        <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-text-primary">
+          {translation.text}
+        </p>
+      </div>
+    );
+  }
+
+  if (translation.error) {
+    return (
+      <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/20">
+        <p className="text-sm text-red-700 dark:text-red-300">{translation.error}</p>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function CommentItem({
+  comment,
+  translation,
+}: {
+  comment: TweetDto;
+  translation?: TranslationState;
+}) {
   return (
     <div className="flex gap-2 border-t border-border py-3 first:border-t-0">
       <Avatar src={comment.authorAvatarUrl} alt={comment.authorName} size={32} />
@@ -35,6 +76,7 @@ function CommentItem({ comment }: { comment: TweetDto }) {
         <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-text-primary">
           {comment.fullText}
         </p>
+        <TranslationBlock translation={translation} />
         <TweetMediaGrid media={comment.media || []} />
         <EngagementStats tweet={comment} />
       </div>
@@ -45,8 +87,10 @@ function CommentItem({ comment }: { comment: TweetDto }) {
 export function TweetDetail({
   tweet,
   translation,
+  translations,
   onBack,
   onToggleTranslation,
+  onTranslateIfNeeded,
 }: TweetDetailProps) {
   const comments = useTweetComments(tweet.id);
   const { loadInitial } = comments;
@@ -56,6 +100,16 @@ export function TweetDetail({
   useEffect(() => {
     loadInitial();
   }, [loadInitial]);
+
+  useEffect(() => {
+    onTranslateIfNeeded(tweet.id, tweet.fullText, tweet.lang);
+  }, [onTranslateIfNeeded, tweet.fullText, tweet.id, tweet.lang]);
+
+  useEffect(() => {
+    comments.comments.forEach((comment) => {
+      onTranslateIfNeeded(comment.id, comment.fullText, comment.lang);
+    });
+  }, [comments.comments, onTranslateIfNeeded]);
 
   return (
     <div className="space-y-3">
@@ -86,6 +140,8 @@ export function TweetDetail({
               {tweet.fullText}
             </p>
 
+            <TranslationBlock translation={translation} />
+
             <TweetMediaGrid media={tweet.media || []} />
 
             <div className="mt-3">
@@ -97,26 +153,10 @@ export function TweetDetail({
                 onClick={() => onToggleTranslation(tweet.id, tweet.fullText, tweet.lang)}
                 className="px-2.5 py-1 text-xs"
               >
+                <Languages size={14} />
                 {buttonLabel}
               </Button>
             </div>
-
-            {translationVisible && translation?.text && (
-              <div className="mt-3 rounded-lg border border-accent/15 bg-accent/5 p-3">
-                <p className="mb-1 text-xs font-semibold text-accent">中文译文</p>
-                <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-text-primary">
-                  {translation.text}
-                </p>
-              </div>
-            )}
-
-            {translationVisible && translation?.error && (
-              <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/20">
-                <p className="text-sm text-red-700 dark:text-red-300">
-                  {translation.error}
-                </p>
-              </div>
-            )}
 
             <EngagementStats tweet={tweet} />
           </div>
@@ -145,7 +185,11 @@ export function TweetDetail({
         )}
 
         {comments.comments.map((comment) => (
-          <CommentItem key={comment.id} comment={comment} />
+          <CommentItem
+            key={comment.id}
+            comment={comment}
+            translation={translations[comment.id]}
+          />
         ))}
 
         {comments.hasMore && (

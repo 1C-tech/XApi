@@ -19,6 +19,7 @@ translation:
   base-url: ${TRANSLATION_BASE_URL:https://libretranslate.com/translate}
   api-key: ${TRANSLATION_API_KEY:}
   timeout: ${TRANSLATION_TIMEOUT:15s}
+  cache-ttl: ${TRANSLATION_CACHE_TTL:7d}
 
 spring:
   data:
