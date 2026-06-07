@@ -1,0 +1,28 @@
+x:
+  api:
+    base-url: https://api.x.com
+    endpoint-id: 54_zVtVXJlQtnIBrY2QSXQ
+    bearer-token: ${X_BEARER_TOKEN}
+    cookie: ${X_COOKIE:}
+    csrf-token: ${X_CSRF_TOKEN:}
+    guest-token: ${X_GUEST_TOKEN:}
+    language: zh-cn
+    cache-ttl: 5m
+    stale-ttl: 30m
+    lock-ttl: 15s
+    lock-wait: 2s
+    rate-limit-min-remaining: 3
+    rate-limit-safety-window: 30s
+
+translation:
+  base-url: ${TRANSLATION_BASE_URL:https://libretranslate.com/translate}
+  api-key: ${TRANSLATION_API_KEY:}
+  timeout: ${TRANSLATION_TIMEOUT:15s}
+
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2s
