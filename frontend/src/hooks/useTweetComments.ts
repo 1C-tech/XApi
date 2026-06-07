@@ -7,12 +7,11 @@ interface TweetCommentsState {
   loading: boolean;
   loadingMore: boolean;
   error: string | null;
-  expanded: boolean;
   hasMore: boolean;
 }
 
 interface UseTweetCommentsReturn extends TweetCommentsState {
-  toggle: () => void;
+  loadInitial: () => void;
   loadMore: () => void;
 }
 
@@ -25,7 +24,6 @@ export function useTweetComments(tweetId: string): UseTweetCommentsReturn {
     loading: false,
     loadingMore: false,
     error: null,
-    expanded: false,
     hasMore: false,
   });
 
@@ -93,8 +91,7 @@ export function useTweetComments(tweetId: string): UseTweetCommentsReturn {
     [tweetId]
   );
 
-  const toggle = useCallback(() => {
-    setState((prev) => ({ ...prev, expanded: !prev.expanded }));
+  const loadInitial = useCallback(() => {
     if (!loadedRef.current) {
       fetchComments(null, false);
     }
@@ -107,7 +104,7 @@ export function useTweetComments(tweetId: string): UseTweetCommentsReturn {
 
   return {
     ...state,
-    toggle,
+    loadInitial,
     loadMore,
   };
 }

@@ -13,6 +13,7 @@ interface TweetFeedProps {
   onLoadMore: () => void;
   translations: Record<string, TranslationState>;
   onToggleTranslation: (tweetId: string, text: string, lang: string) => void;
+  onSelectTweet: (tweet: TweetDto) => void;
 }
 
 export function TweetFeed({
@@ -23,6 +24,7 @@ export function TweetFeed({
   onLoadMore,
   translations,
   onToggleTranslation,
+  onSelectTweet,
 }: TweetFeedProps) {
   if (loading && tweets.length === 0) {
     return (
@@ -56,6 +58,7 @@ export function TweetFeed({
           tweet={tweet}
           translation={translations[tweet.id]}
           onToggleTranslation={onToggleTranslation}
+          onSelectTweet={onSelectTweet}
         />
       ))}
 

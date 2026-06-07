@@ -1,7 +1,7 @@
-import { Image as ImageIcon, Languages, MessageCircle, Play } from 'lucide-react';
+import type { KeyboardEvent, MouseEvent } from 'react';
+import { Image as ImageIcon, Languages, Play } from 'lucide-react';
 import type { TweetDto, TweetMediaDto } from '../../types/api';
 import type { TranslationState } from '../../hooks/useTweetTranslations';
-import { useTweetComments } from '../../hooks/useTweetComments';
 import { Avatar } from '../common/Avatar';
 import { EngagementStats } from '../common/EngagementStats';
 import { Button } from '../ui/Button';
@@ -10,9 +10,10 @@ interface TweetCardProps {
   tweet: TweetDto;
   translation?: TranslationState;
   onToggleTranslation: (tweetId: string, text: string, lang: string) => void;
+  onSelectTweet: (tweet: TweetDto) => void;
 }
 
-function relativeTime(dateStr: string): string {
+export function relativeTime(dateStr: string): string {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -37,16 +38,15 @@ function mediaSrc(media: TweetMediaDto): string | undefined {
   return media.url || media.previewImageUrl;
 }
 
-function TweetMediaGrid({ media }: { media: TweetMediaDto[] }) {
+export function TweetMediaGrid({ media }: { media: TweetMediaDto[] }) {
   const visibleMedia = media.filter(mediaSrc).slice(0, 4);
   if (visibleMedia.length === 0) return null;
 
-  const gridClass =
-    visibleMedia.length === 1
-      ? 'grid-cols-1'
-      : visibleMedia.length === 2
-        ? 'grid-cols-2'
-        : 'grid-cols-2';
+  const gridClass = visibleMedia.length === 1 ? 'grid-cols-1' : 'grid-cols-2';
+
+  const stopCardSelection = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.stopPropagation();
+  };
 
   return (
     <div
@@ -61,6 +61,7 @@ function TweetMediaGrid({ media }: { media: TweetMediaDto[] }) {
             href={src}
             target="_blank"
             rel="noreferrer"
+            onClick={stopCardSelection}
             className={`
               group relative block bg-tertiary
               ${visibleMedia.length === 1 ? 'aspect-[16/10]' : 'aspect-square'}
@@ -91,108 +92,42 @@ function TweetMediaGrid({ media }: { media: TweetMediaDto[] }) {
   );
 }
 
-function CommentItem({ comment }: { comment: TweetDto }) {
-  return (
-    <div className="flex gap-2 border-t border-border py-3 first:border-t-0">
-      <Avatar src={comment.authorAvatarUrl} alt={comment.authorName} size={32} />
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-1 text-xs">
-          <span className="max-w-[140px] truncate font-semibold text-text-primary">
-            {comment.authorName}
-          </span>
-          <span className="max-w-[110px] truncate text-text-secondary">
-            @{comment.authorScreenName}
-          </span>
-          <span className="text-text-secondary">·</span>
-          <span className="whitespace-nowrap text-text-secondary">
-            {relativeTime(comment.createdAt)}
-          </span>
-        </div>
-        <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-text-primary">
-          {comment.fullText}
-        </p>
-        <TweetMediaGrid media={comment.media || []} />
-        <EngagementStats tweet={comment} />
-      </div>
-    </div>
-  );
-}
-
-function TweetComments({ tweetId }: { tweetId: string }) {
-  const comments = useTweetComments(tweetId);
-
-  return (
-    <div className="mt-3">
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        loading={comments.loading}
-        onClick={comments.toggle}
-        className="px-2.5 py-1 text-xs"
-      >
-        <MessageCircle size={14} />
-        {comments.expanded ? '收起评论' : '展开评论'}
-      </Button>
-
-      {comments.expanded && (
-        <div className="mt-3 rounded-lg border border-border bg-primary/40 px-3">
-          {comments.error && (
-            <p className="py-3 text-sm text-red-700 dark:text-red-300">
-              {comments.error}
-            </p>
-          )}
-
-          {!comments.loading && !comments.error && comments.comments.length === 0 && (
-            <p className="py-3 text-sm text-text-secondary">暂无评论</p>
-          )}
-
-          {comments.comments.map((comment) => (
-            <CommentItem key={comment.id} comment={comment} />
-          ))}
-
-          {comments.hasMore && (
-            <div className="flex justify-center border-t border-border py-3">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                loading={comments.loadingMore}
-                onClick={comments.loadMore}
-              >
-                加载更多评论
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function TweetCard({
   tweet,
   translation,
   onToggleTranslation,
+  onSelectTweet,
 }: TweetCardProps) {
   const translationVisible = Boolean(translation?.visible);
   const buttonLabel = translation?.text && translationVisible ? '收起译文' : '翻译';
 
+  const selectTweet = () => {
+    onSelectTweet(tweet);
+  };
+
+  const selectTweetFromKeyboard = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onSelectTweet(tweet);
+    }
+  };
+
   return (
     <article
+      role="button"
+      tabIndex={0}
+      onClick={selectTweet}
+      onKeyDown={selectTweetFromKeyboard}
       className="
         bg-secondary rounded-xl border border-border
-        p-4 shadow-card-sm
+        p-4 shadow-card-sm cursor-pointer
         transition-all duration-200 ease-out
         hover:shadow-card-md hover:border-text-secondary/20
+        focus:outline-none focus:ring-2 focus:ring-accent/40
       "
     >
       <div className="flex gap-3">
-        <Avatar
-          src={tweet.authorAvatarUrl}
-          alt={tweet.authorName}
-          size={48}
-        />
+        <Avatar src={tweet.authorAvatarUrl} alt={tweet.authorName} size={48} />
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -220,7 +155,10 @@ export function TweetCard({
               variant="ghost"
               size="sm"
               loading={Boolean(translation?.loading)}
-              onClick={() => onToggleTranslation(tweet.id, tweet.fullText, tweet.lang)}
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleTranslation(tweet.id, tweet.fullText, tweet.lang);
+              }}
               className="px-2.5 py-1 text-xs"
             >
               <Languages size={14} />
@@ -253,7 +191,6 @@ export function TweetCard({
           )}
 
           <EngagementStats tweet={tweet} />
-          <TweetComments tweetId={tweet.id} />
         </div>
       </div>
     </article>
