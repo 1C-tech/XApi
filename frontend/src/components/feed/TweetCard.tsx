@@ -72,7 +72,7 @@ function TweetMediaGrid({ media }: { media: TweetMediaDto[] }) {
               src={src}
               alt={item.altText || 'tweet media'}
               className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
-              loading="lazy"
+              loading="eager"
             />
             {isVideo && (
               <span className="absolute left-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/65 text-white">
