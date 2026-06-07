@@ -86,6 +86,36 @@ class TranslationServiceTest {
     }
 
     @Test
+    void encodesSpecialCharactersWhenFallingBackToMyMemory() {
+        RestTemplate restTemplate = new RestTemplate();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(restTemplate).build();
+        TranslationProperties properties = new TranslationProperties();
+        properties.setBaseUrl("https://translate.example/translate");
+        TranslationService service = new TranslationService(restTemplate, properties);
+        String text = "I now am the #1 most subscribed to account on the entire X platform! "
+                + "After overtaking Elon Musk today. Thank you everyone for helping me achieve my goal. "
+                + "https://t.co/XLjy4ZsZyD";
+
+        server.expect(once(), requestTo("https://translate.example/translate"))
+                .andRespond(withBadGateway());
+        server.expect(once(), requestTo("https://api.mymemory.translated.net/get"
+                        + "?q=I%20now%20am%20the%20%231%20most%20subscribed%20to%20account%20on%20the%20entire%20X%20platform!%20"
+                        + "After%20overtaking%20Elon%20Musk%20today.%20Thank%20you%20everyone%20for%20helping%20me%20achieve%20my%20goal.%20"
+                        + "https://t.co/XLjy4ZsZyD&langpair=en%7Czh-CN"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(
+                        "{\"responseData\":{\"translatedText\":\"已翻译\"},\"responseStatus\":200}",
+                        MediaType.APPLICATION_JSON
+                ));
+
+        TranslateResponse response = service.translate(new TranslateRequest(text, "en", "zh-CN"));
+
+        assertThat(response.translatedText()).isEqualTo("已翻译");
+        assertThat(response.provider()).isEqualTo("mymemory");
+        server.verify();
+    }
+
+    @Test
     void keepsReasonableDefaults() {
         TranslationProperties properties = new TranslationProperties();
 

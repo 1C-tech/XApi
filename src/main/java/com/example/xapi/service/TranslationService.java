@@ -15,6 +15,8 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
+
 @Service
 public class TranslationService {
     private static final String PRIMARY_PROVIDER = "libretranslate";
@@ -81,11 +83,12 @@ public class TranslationService {
             throw new XApiRequestException("Fallback translation requires a source language");
         }
 
-        String uri = UriComponentsBuilder.fromHttpUrl(MY_MEMORY_URL)
+        URI uri = UriComponentsBuilder.fromHttpUrl(MY_MEMORY_URL)
                 .queryParam("q", text)
                 .queryParam("langpair", toMyMemoryLanguage(sourceLang) + "|" + toMyMemoryLanguage(targetLang))
-                .build(false)
-                .toUriString();
+                .build()
+                .encode()
+                .toUri();
         MyMemoryResponse response = restTemplate.getForObject(uri, MyMemoryResponse.class);
         if (response == null
                 || response.responseData() == null
